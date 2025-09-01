@@ -7,8 +7,10 @@ from django.views.generic import CreateView
 from django.contrib.auth.decorators import user_passes_test, permission_required
 from django.http import HttpResponseForbidden
 from django.contrib import messages
+from django.contrib.auth import login
 from .models import Book, Library
 from .forms import BookForm  # Assuming we have a form, but for simplicity, we'll use modelform
+
 
 # Function-based view to list all books
 def list_books(request):
@@ -39,19 +41,16 @@ class RegisterView(CreateView):
 def role_check(user, role):
     return user.is_authenticated and hasattr(user, 'userprofile') and user.userprofile.role == role
 
+@user_passes_test(lambda u: role_check(u, 'Admin'))
 def admin_view(request):
-    if not role_check(request.user, 'Admin'):
-        return HttpResponseForbidden("Access denied")
     return render(request, 'relationship_app/admin_view.html')
 
+@user_passes_test(lambda u: role_check(u, 'Librarian'))
 def librarian_view(request):
-    if not role_check(request.user, 'Librarian'):
-        return HttpResponseForbidden("Access denied")
     return render(request, 'relationship_app/librarian_view.html')
 
+@user_passes_test(lambda u: role_check(u, 'Member'))
 def member_view(request):
-    if not role_check(request.user, 'Member'):
-        return HttpResponseForbidden("Access denied")
     return render(request, 'relationship_app/member_view.html')
 
 # Book CRUD views with permissions
