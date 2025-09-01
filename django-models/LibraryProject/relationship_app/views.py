@@ -7,6 +7,7 @@ from django.views.generic import CreateView
 from django.contrib.auth.decorators import user_passes_test, permission_required
 from django.http import HttpResponseForbidden
 from django.contrib import messages
+from django.contrib.auth.decorators import permission_required
 from django.contrib.auth import login
 from .models import Book, Library
 from .forms import BookForm  # Assuming we have a form, but for simplicity, we'll use modelform
