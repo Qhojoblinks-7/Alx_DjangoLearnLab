@@ -1,16 +1,12 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import permission_required
-from django.views.generic import DetailView
-from django.contrib.auth.views import LoginView
-from django.contrib.auth.views import  LogoutView
+from django.contrib.auth.decorators import permission_required, user_passes_test
+from django.views.generic import DetailView, CreateView
+from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.forms import UserCreationForm
 from django.urls import reverse_lazy
-from django.views.generic import CreateView
-from django.contrib.auth.decorators import user_passes_test
 from django.contrib import messages
 from django.contrib.auth import login
-from .models import  Library
-from .models import Book
+from .models import Library, Book
 from .forms import BookForm  # Assuming a ModelForm for Book
 
 # 📚 Function-based view to list all books
@@ -23,11 +19,6 @@ class LibraryDetailView(DetailView):
     model = Library
     template_name = 'relationship_app/library_detail.html'
     context_object_name = 'library'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['books'] = self.object.books.all()
-        return context
 
 # 🔐 Authentication views
 class CustomLoginView(LoginView):
