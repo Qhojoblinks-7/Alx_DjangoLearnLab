@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import permission_required, user_passes_test
 from django.views.generic import DetailView, CreateView
 from django.contrib.auth.views import LoginView, LogoutView
-from django.contrib.auth.forms import UserCreationForm
+from .forms import CustomUserCreationForm
 from django.views.generic.detail import DetailView
 
 from django.urls import reverse_lazy
@@ -28,19 +28,19 @@ class CustomLogoutView(LogoutView):
     template_name = 'relationship_app/logout.html'
 
 class RegisterView(CreateView):
-    form_class = UserCreationForm
+    form_class = CustomUserCreationForm
     template_name = 'relationship_app/register.html'
     success_url = reverse_lazy('login')
 
 def register(request):
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
+        form = CustomUserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
             login(request, user)
             return redirect('login')
     else:
-        form = UserCreationForm()
+        form = CustomUserCreationForm()
     return render(request, 'relationship_app/register.html', {'form': form})
 
 # 🛡️ Role-based access control

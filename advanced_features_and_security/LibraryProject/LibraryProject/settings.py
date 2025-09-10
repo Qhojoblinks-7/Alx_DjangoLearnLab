@@ -134,6 +134,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # Security settings for HTTPS and secure redirects
 SECURE_SSL_REDIRECT = True  # Redirects all HTTP requests to HTTPS - prevents man-in-the-middle attacks
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')  # Tells Django the connection is secure when behind a proxy
 SECURE_HSTS_SECONDS = 31536000  # HTTP Strict Transport Security: enforces HTTPS for 1 year
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True  # HSTS applies to all subdomains
 SECURE_HSTS_PRELOAD = True  # Allows site to be included in browser's HSTS preload list

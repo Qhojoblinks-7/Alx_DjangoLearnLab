@@ -6,10 +6,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # Get permissions
-        view_perm = Permission.objects.get(codename='can_view_book')
-        create_perm = Permission.objects.get(codename='can_create_book')
-        edit_perm = Permission.objects.get(codename='can_edit_book')
-        delete_perm = Permission.objects.get(codename='can_delete_book')
+        view_perm = Permission.objects.get(codename='can_view_book', content_type__app_label='bookshelf')
+        create_perm = Permission.objects.get(codename='can_create_book', content_type__app_label='bookshelf')
+        edit_perm = Permission.objects.get(codename='can_edit_book', content_type__app_label='bookshelf')
+        delete_perm = Permission.objects.get(codename='can_delete_book', content_type__app_label='bookshelf')
 
         # Create groups
         viewers, created = Group.objects.get_or_create(name='Viewers')
