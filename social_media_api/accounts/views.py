@@ -1,13 +1,13 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status, viewsets
-from rest_framework.permissions import IsAuthenticated
+from rest_framework import status, viewsets, generics
+from rest_framework import permissions
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
 from .serializers import UserRegistrationSerializer, UserLoginSerializer, UserSerializer
 from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
-from django.db.models import Count 
+from django.db.models import Count
 from .models import User
 
 class RegistrationView(APIView):
@@ -77,5 +77,51 @@ class UserProfileViewSet(viewsets.ReadOnlyModelViewSet):
             "status": status_message,
             "followers_count": target_user.followers.count(),
             "is_following": status_message == "followed"
+        }, status=status.HTTP_200_OK)
+
+
+class FollowUserView(generics.GenericAPIView):  # ✅ generics.GenericAPIView
+    queryset = User.objects.all()  # ✅ CustomUser.objects.all() (User is the custom user model)
+    permission_classes = [permissions.IsAuthenticated]  # ✅ permissions.IsAuthenticated
+
+    def post(self, request, pk):
+        target_user = self.get_object()
+        current_user = request.user
+
+        if current_user == target_user:
+            return Response({'error': "You cannot follow yourself."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if target_user.followers.filter(id=current_user.id).exists():
+            return Response({'error': "Already following this user."}, status=status.HTTP_400_BAD_REQUEST)
+
+        current_user.followers.add(target_user)
+
+        return Response({
+            "status": "followed",
+            "followers_count": target_user.followers.count(),
+            "is_following": True
+        }, status=status.HTTP_200_OK)
+
+
+class UnfollowUserView(generics.GenericAPIView):  # ✅ generics.GenericAPIView
+    queryset = User.objects.all()  # ✅ CustomUser.objects.all() (User is the custom user model)
+    permission_classes = [permissions.IsAuthenticated]  # ✅ permissions.IsAuthenticated
+
+    def post(self, request, pk):
+        target_user = self.get_object()
+        current_user = request.user
+
+        if current_user == target_user:
+            return Response({'error': "You cannot unfollow yourself."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not target_user.followers.filter(id=current_user.id).exists():
+            return Response({'error': "Not following this user."}, status=status.HTTP_400_BAD_REQUEST)
+
+        current_user.followers.remove(target_user)
+
+        return Response({
+            "status": "unfollowed",
+            "followers_count": target_user.followers.count(),
+            "is_following": False
         }, status=status.HTTP_200_OK)
     
