@@ -57,15 +57,12 @@ class FeedViewSet(viewsets.ReadOnlyModelViewSet):
     
     def get_queryset(self):
         user = self.request.user
-        
-        # Get IDs of users the current user follows
-        followed_users_id = user.following.values_list('id', flat=True)
-        
-        
-        # Filter posts (Task 2 requirement: show followed users' posts)
-        # You can expand this with an OR condition (Q object) to mix in popular posts later.
-        
-        queryset = Post.objects.filter(author__id__in=followed_users_id).order_by('-created_at')
+
+        # Get users the current user follows
+        following_users = user.following.all()  # ✅ following.all()
+
+        # Filter posts from followed users, ordered by creation date (most recent first)
+        queryset = Post.objects.filter(author__in=following_users).order_by('-created_at')  # ✅ Post.objects.filter(author__in=following_users).order_by
         
         
         #  Optimization for speed
