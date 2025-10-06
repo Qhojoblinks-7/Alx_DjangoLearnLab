@@ -11,35 +11,7 @@ from notifications.models import Notification
 from notifications.serializers import NotificationSerializer
 
 
-@receiver(post_save, sender=Like)
-def create_like_notification(sender, instance, created, **kwargs):
-    # Only create a notification if a new Like was created
-    if created:
-        recipient = instance.post.author
-        
-        # 1. Create the Database Notification
-        notification = Notification.objects.create(
-            recipient=recipient,
-            actor=instance.user,
-            verb="liked",
-            target=instance.post
-        )
-        
-        # 2. Send Real-time WebSocket Update 
-        channel_layer = get_channel_layer()
-        notification_data = NotificationSerializer(notification).data # Serialize the notification object
-
-        # Group name for the recipient user
-        group_name = f'user_{recipient.id}_notifications'
-        
-        async_to_sync(channel_layer.group_send)(
-            group_name,
-            {
-                'type': 'send_notification', # Corresponds to method in NotificationConsumer
-                'data': notification_data,
-                'event_type': 'new_notification'
-            }
-        )
+# Note: Like notifications are now created directly in PostLikeView
 
 
 @receiver([post_save, post_delete], sender=Like)

@@ -89,7 +89,8 @@ Authorization: Bearer <your-jwt-token>
 - `GET /api/posts/posts/{id}/` - Get post details
 - `PUT /api/posts/posts/{id}/` - Update post (author only)
 - `DELETE /api/posts/posts/{id}/` - Delete post (author only)
-- `POST /api/posts/posts/{id}/like/` - Like/unlike a post
+- `POST /api/posts/posts/{id}/like/` - Like a post
+- `POST /api/posts/posts/{id}/unlike/` - Unlike a post
 
 #### Comments
 

@@ -1,4 +1,4 @@
-from rest_framework import viewsets, filters
+from rest_framework import viewsets, filters, generics
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from .models import Post, Comment, Like
 from .serializers import PostSerializer, CommentSerializer
@@ -8,6 +8,11 @@ from .permissions import IsOwnerOrReadOnly
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.pagination import LimitOffsetPagination
 from django.shortcuts import get_object_or_404
+from notifications.models import Notification
+from notifications.serializers import NotificationSerializer
+from django.contrib.contenttypes.models import ContentType
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
@@ -70,24 +75,67 @@ class FeedViewSet(viewsets.ReadOnlyModelViewSet):
     
 class PostLikeView(views.APIView):
     permission_classes = [IsAuthenticated]
-    
+
     def post(self, request, pk):
-        post = get_object_or_404(Post, pk=pk)
+        post = generics.get_object_or_404(Post, pk=pk)
         user = request.user
-        
-        try:
-            # If it exists, delete it (UNLIKE)
-            like_instance = Like.objects.get(user=user, post=post)
-            like_instance.delete()
-            status_message = "unliked"
-        except Like.DoesNotExist:
-            # If it doesn't exist, create it (LIKE)
-            Like.objects.create(user=user, post=post)
+
+        like, created = Like.objects.get_or_create(user=user, post=post)
+
+        if created:
+            # Like was created
             status_message = "liked"
+
+            # Create notification for the like
+            notification = Notification.objects.create(
+                recipient=post.author,
+                actor=user,
+                verb="liked",
+                target=post
+            )
+
+            # Send real-time WebSocket notification
+            channel_layer = get_channel_layer()
+            notification_data = NotificationSerializer(notification).data
+            group_name = f'user_{post.author.id}_notifications'
+
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {
+                    'type': 'send_notification',
+                    'data': notification_data,
+                    'event_type': 'new_notification'
+                }
+            )
+        else:
+            # Like already exists
+            return Response({"error": "Post already liked"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Return the updated count for the PostCard UI
         return Response({
             "status": status_message,
             "likes_count": post.likes.count(),
-            "is_liked": status_message == "liked"
+            "is_liked": True
+        }, status=status.HTTP_200_OK)
+
+
+class PostUnlikeView(views.APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        post = generics.get_object_or_404(Post, pk=pk)
+        user = request.user
+
+        try:
+            like = Like.objects.get(user=user, post=post)
+            like.delete()
+            status_message = "unliked"
+        except Like.DoesNotExist:
+            return Response({"error": "Post not liked yet"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Return the updated count for the PostCard UI
+        return Response({
+            "status": status_message,
+            "likes_count": post.likes.count(),
+            "is_liked": False
         }, status=status.HTTP_200_OK)
