@@ -135,8 +135,13 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Configure customem user model
+# Configure custom user model
 AUTH_USER_MODEL = 'accounts.User'
+
+# Security settings
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_SSL_REDIRECT = True
+X_FRAME_OPTIONS = 'DENY'
 
 ASGI_APPLICATION = 'social_media_api.asgi.application'
 

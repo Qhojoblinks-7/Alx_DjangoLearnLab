@@ -153,11 +153,15 @@ black .
 For production deployment:
 
 1. Set `DEBUG = False` in settings.py
-2. Configure a production database (PostgreSQL recommended)
-3. Set up Redis for Channel Layers
-4. Use a WSGI server like Gunicorn or ASGI server like Daphne
-5. Configure static/media file serving
-6. Set proper ALLOWED_HOSTS and SECRET_KEY
+2. Configure security settings:
+   - `SECURE_BROWSER_XSS_FILTER = True`
+   - `SECURE_SSL_REDIRECT = True`
+   - `X_FRAME_OPTIONS = 'DENY'`
+3. Configure a production database (PostgreSQL recommended)
+4. Set up Redis for Channel Layers
+5. Use a WSGI server like Gunicorn or ASGI server like Daphne
+6. Configure static/media file serving
+7. Set proper ALLOWED_HOSTS and SECRET_KEY
 
 ## Contributing
 
