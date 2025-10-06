@@ -1,6 +1,6 @@
 from rest_framework.routers import DefaultRouter
 from rest_framework_nested import routers
-from .views import PostViewSet, CommentViewSet, FeedViewSet, PostLikeView, PostUnlikeView
+from .views import PostViewSet, CommentViewSet, FeedViewSet, PostLikeView
 from django.urls import path,include
 
 app_name = 'post'
@@ -17,5 +17,4 @@ urlpatterns = [
     path('', include(router.urls)),
     path('', include(posts_router.urls)),
     path('posts/<int:pk>/like/', PostLikeView.as_view(), name='post-like'),
-    path('posts/<int:pk>/unlike/', PostUnlikeView.as_view(), name='post-unlike'),
 ]

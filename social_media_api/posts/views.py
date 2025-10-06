@@ -82,8 +82,12 @@ class PostLikeView(views.APIView):
 
         like, created = Like.objects.get_or_create(user=user, post=post)
 
-        if created:
-            # Like was created
+        if not created:
+            # If like already existed, delete it (UNLIKE)
+            like.delete()
+            status_message = "unliked"
+        else:
+            # If like was created, it's a LIKE
             status_message = "liked"
 
             # Create notification for the like
@@ -107,35 +111,10 @@ class PostLikeView(views.APIView):
                     'event_type': 'new_notification'
                 }
             )
-        else:
-            # Like already exists
-            return Response({"error": "Post already liked"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Return the updated count for the PostCard UI
         return Response({
             "status": status_message,
             "likes_count": post.likes.count(),
-            "is_liked": True
-        }, status=status.HTTP_200_OK)
-
-
-class PostUnlikeView(views.APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, pk):
-        post = generics.get_object_or_404(Post, pk=pk)
-        user = request.user
-
-        try:
-            like = Like.objects.get(user=user, post=post)
-            like.delete()
-            status_message = "unliked"
-        except Like.DoesNotExist:
-            return Response({"error": "Post not liked yet"}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Return the updated count for the PostCard UI
-        return Response({
-            "status": status_message,
-            "likes_count": post.likes.count(),
-            "is_liked": False
+            "is_liked": status_message == "liked"
         }, status=status.HTTP_200_OK)
