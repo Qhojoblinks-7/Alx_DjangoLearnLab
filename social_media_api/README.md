@@ -157,11 +157,15 @@ For production deployment:
    - `SECURE_BROWSER_XSS_FILTER = True`
    - `SECURE_SSL_REDIRECT = True`
    - `X_FRAME_OPTIONS = 'DENY'`
-3. Configure a production database (PostgreSQL recommended)
-4. Set up Redis for Channel Layers
-5. Use a WSGI server like Gunicorn or ASGI server like Daphne
-6. Configure static/media file serving
-7. Set proper ALLOWED_HOSTS and SECRET_KEY
+3. Configure static and media files:
+   - Run `python manage.py collectstatic` to collect static files
+   - For media files, consider using cloud storage like AWS S3 with django-storages
+4. Configure a production database (PostgreSQL recommended)
+5. Set up Redis for Channel Layers
+6. Use a WSGI server like Gunicorn or ASGI server like Daphne
+7. Configure static/media file serving (nginx/apache)
+8. Set proper ALLOWED_HOSTS and SECRET_KEY
+9. Set server port via environment variable or server configuration
 
 ## Contributing
 
