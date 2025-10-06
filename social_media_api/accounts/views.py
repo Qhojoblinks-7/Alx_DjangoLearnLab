@@ -1,9 +1,14 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, viewsets
+from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
 from .serializers import UserRegistrationSerializer, UserLoginSerializer, UserSerializer
+from rest_framework.decorators import action
+from django.shortcuts import get_object_or_404
+from django.db.models import Count 
+from .models import User
 
 class RegistrationView(APIView):
     permission_classes = ()
@@ -37,4 +42,40 @@ class LoginView(APIView):
                 }, status = status.HTTP_200_OK)
             return Response({'error': 'Invalid Credentials'}, status = status.HTTP_401_UNAUTHORIZED)
         return Response(serializer.errors, status = status.HTTP_400_BAD_REQUEST)
+    
+    
+class UserProfileViewSet(viewsets.ReadOnlyModelViewSet):
+    # to ensure followers_count and following_count are available
+    queryset = User.objects.annotate(
+        followers_count = Count('followers', distinct=True),
+        following_count = Count('following', distinct=True)
+    )
+    
+    serializer_class = UserSerializer
+    
+    
+    # Action to handle /api/accounts/users/{pk}/follow/ (Task 2 requirement)
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def follow(self, request, pk=None):
+        target_user = get_object_or_404(User, pk=pk)
+        current_user = request.user
+        
+        
+        if current_user == target_user:
+            return Response({'error': "You cannot follow yourself."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Toggle follow/unfollow
+        if target_user.followers.filter(id=current_user.id).exists():
+            current_user.followers.remove(target_user)
+            status_message = "unfollowed"
+
+        else:
+            current_user.followers.add(target_user)
+            status_message = "followed"
+
+        return Response({
+            "status": status_message,
+            "followers_count": target_user.followers.count(),
+            "is_following": status_message == "followed"
+        }, status=status.HTTP_200_OK)
     
