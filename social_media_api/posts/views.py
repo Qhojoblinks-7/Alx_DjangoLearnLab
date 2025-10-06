@@ -1,10 +1,13 @@
 from rest_framework import viewsets, filters
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
-from .models import Post, Comment
+from .models import Post, Comment, Like
 from .serializers import PostSerializer, CommentSerializer
+from rest_framework import views, status
+from rest_framework.response import Response
 from .permissions import IsOwnerOrReadOnly
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.pagination import LimitOffsetPagination
+from django.shortcuts import get_object_or_404
 
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
@@ -64,4 +67,27 @@ class FeedViewSet(viewsets.ReadOnlyModelViewSet):
         queryset = queryset.select_related('author').prefetch_related('likes', 'comments')
         
         return queryset
+    
+class PostLikeView(views.APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, pk):
+        post = get_object_or_404(Post, pk=pk)
+        user = request.user
         
+        try:
+            # If it exists, delete it (UNLIKE)
+            like_instance = Like.objects.get(user=user, post=post)
+            like_instance.delete()
+            status_message = "unliked"
+        except Like.DoesNotExist:
+            # If it doesn't exist, create it (LIKE)
+            Like.objects.create(user=user, post=post)
+            status_message = "liked"
+
+        # Return the updated count for the PostCard UI
+        return Response({
+            "status": status_message,
+            "likes_count": post.likes.count(),
+            "is_liked": status_message == "liked"
+        }, status=status.HTTP_200_OK)

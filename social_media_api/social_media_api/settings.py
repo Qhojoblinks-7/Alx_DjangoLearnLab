@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     #local_apps
     'accounts',
     'posts',
+    'notifications',
+    'channels',
 
 ]
 
@@ -135,3 +137,19 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Configure customem user model
 AUTH_USER_MODEL = 'accounts.User'
+
+ASGI_APPLICATION = 'social_media_api.asgi.application'
+
+# Configure the Channel Layer (In-memory for Dev, replace with Redis for Prod)
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+    # For production:
+    # 'default': {
+    #     'BACKEND': 'channels_redis.pubsub.RedisChannelLayer',
+    #     'CONFIG': {
+    #         "hosts": [('127.0.0.1', 6379)],
+    #     },
+    # },
+}
