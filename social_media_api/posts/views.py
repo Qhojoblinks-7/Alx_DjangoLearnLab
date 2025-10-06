@@ -1,5 +1,6 @@
 from rest_framework import viewsets, filters, generics
-from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
+from rest_framework import permissions
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from .models import Post, Comment, Like
 from .serializers import PostSerializer, CommentSerializer
 from rest_framework import views, status
@@ -50,7 +51,7 @@ class FeedViewSet(viewsets.ReadOnlyModelViewSet):
     A simple ViewSet for viewing the feed of posts.
     """
     serializer_class = PostSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
     pagination_class = LimitOffsetPagination
     
     
@@ -74,7 +75,7 @@ class FeedViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset
     
 class PostLikeView(views.APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, pk):
         post = generics.get_object_or_404(Post, pk=pk)
