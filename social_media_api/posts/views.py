@@ -118,3 +118,24 @@ class PostLikeView(views.APIView):
             "likes_count": post.likes.count(),
             "is_liked": status_message == "liked"
         }, status=status.HTTP_200_OK)
+
+
+class PostUnlikeView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        post = generics.get_object_or_404(Post, pk=pk)
+
+        try:
+            like = Like.objects.get(user=request.user, post=post)
+            like.delete()
+            status_message = "unliked"
+        except Like.DoesNotExist:
+            return Response({"error": "Post not liked yet"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Return the updated count for the PostCard UI
+        return Response({
+            "status": status_message,
+            "likes_count": post.likes.count(),
+            "is_liked": False
+        }, status=status.HTTP_200_OK)
