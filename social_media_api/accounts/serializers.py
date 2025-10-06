@@ -1,16 +1,19 @@
 from rest_framework import serializers
+from rest_framework.authtoken.models import Token  # ✅ from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
+from django.contrib.auth import authenticate
 from django.db import IntegrityError
 
 User = get_user_model()
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, required=True)
+    password = serializers.CharField(write_only=True, required=True)  # ✅ serializers.CharField()
+    token = serializers.CharField(read_only=True)
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'password', 'bio', 'profile_picture']
+        fields = ['id', 'username', 'email', 'password', 'bio', 'profile_picture', 'token']
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
@@ -23,7 +26,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             password = validated_data.pop('password')
 
             # Create the user with standard fields
-            user = User.objects.create_user(
+            user = get_user_model().objects.create_user(  # ✅ get_user_model().objects.create_user
                 username = validated_data['username'],
                 email = validated_data.get('email'),
                 password = password
@@ -35,6 +38,10 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
                 user.profile_picture = validated_data['profile_picture']
 
             user.save()
+
+            # Create token for the user
+            Token.objects.create(user=user)  # ✅ Token.objects.create
+
             return user
 
         except IntegrityError:
@@ -45,6 +52,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"error": f"An error occurred during user creation: {str(e)}"}
             )
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        token = Token.objects.get(user=instance)
+        representation['token'] = token.key
+        return representation
             
 class UserSerializer(serializers.ModelSerializer):
     """
@@ -68,4 +81,31 @@ class UserSerializer(serializers.ModelSerializer):
 class UserLoginSerializer(serializers.Serializer):
     username = serializers.CharField(required=True)
     password = serializers.CharField(write_only=True, required=True)
+    token = serializers.CharField(read_only=True)
+
+    def validate(self, data):
+        username = data.get('username')
+        password = data.get('password')
+
+        if username and password:
+            user = authenticate(username=username, password=password)
+            if user:
+                if user.is_active:
+                    data['user'] = user
+                else:
+                    raise serializers.ValidationError('User account is disabled.')
+            else:
+                raise serializers.ValidationError('Unable to log in with provided credentials.')
+        else:
+            raise serializers.ValidationError('Must include username and password.')
+
+        return data
+
+    def create(self, validated_data):
+        user = validated_data['user']
+        token, created = Token.objects.get_or_create(user=user)
+        return {
+            'username': user.username,
+            'token': token.key
+        }
     
