@@ -10,13 +10,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'password', 'bio', 'profile_image']
+        fields = ['id', 'username', 'email', 'password', 'bio', 'profile_picture']
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
         """
         Create a new user with the validated data.
-        Handles user creation with additional fields like bio and profile_image.
+        Handles user creation with additional fields like bio and profile_picture.
         """
         try:
             # Extract password to avoid passing it to create_user unnecessarily
@@ -31,8 +31,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
             # Set additional fields
             user.bio = validated_data.get('bio', '')
-            if 'profile_image' in validated_data:
-                user.profile_image = validated_data['profile_image']
+            if 'profile_picture' in validated_data:
+                user.profile_picture = validated_data['profile_picture']
 
             user.save()
             return user
@@ -56,7 +56,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'bio', 'profile_image', 'followers_count', 'following_count']
+        fields = ['id', 'username', 'email', 'bio', 'profile_picture', 'followers_count', 'following_count']
 
     def get_followers_count(self, obj):
         return obj.followers.count()

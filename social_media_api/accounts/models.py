@@ -4,7 +4,7 @@ from django.conf import settings
 
 class User(AbstractUser):
     bio = models.TextField(max_length = 500, blank = True, default = "")
-    profile_image = models.ImageField(upload_to='profile_images/', blank = True)
+    profile_picture = models.ImageField(upload_to='profile_images/', blank = True)
     
     
     # Followers (Many-to-Many to itself, asymmetrical)
