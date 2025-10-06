@@ -78,9 +78,8 @@ class PostLikeView(views.APIView):
 
     def post(self, request, pk):
         post = generics.get_object_or_404(Post, pk=pk)
-        user = request.user
 
-        like, created = Like.objects.get_or_create(user=user, post=post)
+        like, created = Like.objects.get_or_create(user=request.user, post=post)
 
         if not created:
             # If like already existed, delete it (UNLIKE)
@@ -93,7 +92,7 @@ class PostLikeView(views.APIView):
             # Create notification for the like
             notification = Notification.objects.create(
                 recipient=post.author,
-                actor=user,
+                actor=request.user,
                 verb="liked",
                 target=post
             )
