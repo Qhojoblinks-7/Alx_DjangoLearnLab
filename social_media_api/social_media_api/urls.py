@@ -16,9 +16,29 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+from posts.views import TrendsView, LeaguesView, TeamsView, AthletesView, HomeFeedViewSet, SearchViewSet
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/accounts/', include('accounts.urls')),
-    path('api/posts/', include('posts.urls'))
+    path('accounts/', include(('accounts.urls', 'accounts'), namespace='accounts')),
+    path('posts/', include('posts.urls')),
+    path('notifications/', include('notifications.urls')),
+    path('messages/', include('messages.urls')),
+    path('communities/', include('communities.urls')),
+    path('lists/', include('lists.urls')),
+    path('community_notes/', include('community_notes.urls')),
+    path('sports/', include('sports.urls')),
+    path('feed/home/', HomeFeedViewSet.as_view({'get': 'list'}), name='home-feed'),  # B-FEED-01
+    path('search/', SearchViewSet.as_view({'get': 'list'}), name='search'),  # B-SEARCH-01
+    path('search/context/', SearchViewSet.as_view({'get': 'context'}), name='search-context'),  # B-SEARCH-02
+    path('trends/', TrendsView.as_view({'get': 'list'}), name='trends'),  # B-EXP-TRN-01
+    path('leagues/', LeaguesView.as_view({'get': 'list'}), name='leagues'),  # B-LEAGUE-01
+    path('teams/', TeamsView.as_view({'get': 'list'}), name='teams'),  # B-TEAM-01
+    path('athletes/', AthletesView.as_view({'get': 'list'}), name='athletes'),  # B-ATHLETE-01
 ]
+
+# Serve media files during development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

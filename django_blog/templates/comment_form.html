@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Comment{% endblock %}
+
+{% block content %}
+<h2>Edit Comment</h2>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="message {{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    <div class="form-group">
+        <label for="{{ form.content.id_for_label }}">Comment:</label>
+        {{ form.content }}
+        {% if form.content.errors %}
+            <div class="error">{{ form.content.errors }}</div>
+        {% endif %}
+    </div>
+    <button type="submit">Update Comment</button>
+    <a href="{% url 'post_detail' object.post.pk %}">Cancel</a>
+</form>
+{% endblock %}

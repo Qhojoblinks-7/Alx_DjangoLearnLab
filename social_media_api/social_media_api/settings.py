@@ -11,13 +11,15 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
+import logging
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
 # Server configuration
-PORT = int(os.getenv('PORT', 8000))
+PORT = int(os.getenv('PORT',  8000))
 
 
 # Quick-start development settings - unsuitable for production
@@ -27,9 +29,9 @@ PORT = int(os.getenv('PORT', 8000))
 SECRET_KEY = 'django-insecure-z&izvtw)(8lynhz=#639^x%k$j!vt+#5#3a$yo5r^jtkshqu4z'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '127.0.0.1:8000']
 
 
 # Application definition
@@ -43,21 +45,31 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     #Third-party_apps
+    'corsheaders',
     'rest_framework',
     'rest_framework.authtoken',
     'rest_framework_simplejwt',
     'django_filters',
+    'imagekit',
+    'storages',
 
 
     #local_apps
     'accounts',
     'posts',
     'notifications',
+    'messages.apps.MessagesConfig',
+    'chat',
     'channels',
+    'communities',
+    'lists',
+    'community_notes',
+    'sports',
 
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -144,13 +156,167 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# AWS S3 Configuration for Media Storage
+AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME', 'sportisode-media')
+AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'us-east-1')
+AWS_S3_CUSTOM_DOMAIN = os.getenv('AWS_S3_CUSTOM_DOMAIN')  # CloudFront distribution domain
+AWS_DEFAULT_ACL = 'public-read'
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=86400',  # 24 hours
+}
+
+# Use S3 for media files by default (can be overridden for development)
+USE_S3 = os.getenv('USE_S3', 'true').lower() == 'true'
+if USE_S3:
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    AWS_LOCATION = 'media'
+    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/' if AWS_S3_CUSTOM_DOMAIN else f'https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/media/'
+
+    # S3 CORS Configuration
+    AWS_S3_CORS_ORIGINS = [
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+        'http://localhost:5174',
+        'http://127.0.0.1:5174',
+        'http://localhost:5175',
+        'http://127.0.0.1:5175',
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        os.getenv('FRONTEND_URL', 'https://yourdomain.com'),  # Production frontend URL
+    ]
+    AWS_S3_CORS_METHODS = ['GET', 'PUT', 'POST']
+    AWS_S3_CORS_HEADERS = ['*']
+    AWS_S3_CORS_MAX_AGE_SECONDS = 3600
+
 # Configure custom user model
 AUTH_USER_MODEL = 'accounts.User'
 
+# JWT Settings
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': False,
+
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUDIENCE': None,
+    'ISSUER': None,
+
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+
+    'JTI_CLAIM': 'jti',
+
+    'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
+    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
+}
+
+# DRF Configuration
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'posts.throttling.BurstRateThrottle',
+        'posts.throttling.SustainedRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'burst': '60/minute',
+        'sustained': '1000/hour',
+        'post_creation': '10/hour',
+        'live_stream_creation': '3/day',
+        'media_upload': '20/minute',
+        'chat_messages': '5/minute',
+        'feed_access': '100/minute',
+        'search': '30/minute',
+        'analytics': '10/minute',
+        'premium': '1000/hour',
+    },
+}
+
+# CORS settings for development
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5174',
+    'http://localhost:5175',
+    'http://127.0.0.1:5175',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:5176',
+    'http://127.0.0.1:5176',
+]
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = False  # Keep False for security, use ALLOWED_ORIGINS
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https?://localhost:\d+$",  # Allow any port on localhost
+    r"^https?://127\.0\.0\.1:\d+$",  # Allow any port on 127.0.0.1
+    r"^https?://0\.0\.0\.0:\d+$",  # Allow any port on 0.0.0.0
+]
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
 # Security settings
 SECURE_BROWSER_XSS_FILTER = True
-SECURE_SSL_REDIRECT = True
+SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False').lower() == 'true'
 X_FRAME_OPTIONS = 'DENY'
+
+# Additional security settings for production
+if not DEBUG:
+    # Production security settings
+    SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '31536000'))  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+    # Cookie security
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    CSRF_COOKIE_HTTPONLY = True
+
+    # Content Security Policy (basic)
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
+    # Additional production settings
+    SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
+    SECURE_CROSS_ORIGIN_EMBEDDER_POLICY = 'require-corp'
 
 ASGI_APPLICATION = 'social_media_api.asgi.application'
 
@@ -166,4 +332,134 @@ CHANNEL_LAYERS = {
     #         "hosts": [('127.0.0.1', 6379)],
     #     },
     # },
+}
+
+# Celery Configuration
+CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+# Celery Beat Settings (for periodic tasks)
+CELERY_BEAT_SCHEDULE = {
+    'calculate-daily-analytics': {
+        'task': 'posts.tasks.calculate_daily_analytics',
+        'schedule': 86400.0,  # Every 24 hours (86400 seconds)
+    },
+    'update-engagement-rates': {
+        'task': 'posts.tasks.update_engagement_rates',
+        'schedule': 3600.0,   # Every hour
+    },
+    # Sports data refresh tasks
+    'refresh-league-standings': {
+        'task': 'sports.tasks.update_league_standings',
+        'schedule': 1800.0,  # Every 30 minutes
+    },
+    'refresh-team-schedules': {
+        'task': 'sports.tasks.update_team_schedules',
+        'schedule': 3600.0,  # Every hour
+    },
+    'refresh-athlete-info': {
+        'task': 'sports.tasks.update_athlete_info',
+        'schedule': 86400.0,  # Every 24 hours (athlete data changes less frequently)
+    },
+    'comprehensive-sports-refresh': {
+        'task': 'sports.tasks.refresh_all_sports_data',
+        'schedule': 21600.0,  # Every 6 hours for comprehensive refresh
+    },
+}
+
+# Cache Configuration (using Redis for analytics caching)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    },
+    'analytics': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': os.getenv('REDIS_URL', 'redis://localhost:6379/1'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}
+
+# Analytics Settings
+ANALYTICS_CACHE_TIMEOUT = 3600  # 1 hour
+ANALYTICS_BATCH_SIZE = 1000     # Process events in batches
+ANALYTICS_RETENTION_DAYS = 90   # Keep analytics data for 90 days
+
+# Media Processing Settings
+# ImageKit Settings
+IMAGEKIT_DEFAULT_IMAGE_QUALITY = 85
+IMAGEKIT_DEFAULT_FORMAT = 'WEBP'
+
+# Media Processing Configuration
+MEDIA_PROCESSING_CONFIG = {
+    'image': {
+        'thumbnail': {'width': 150, 'height': 150, 'crop': 'center'},
+        'preview': {'width': 800, 'height': 600, 'crop': 'smart'},
+        'full': {'quality': 90, 'format': 'WEBP'},
+    },
+    'video': {
+        'thumbnail': {'time': 1.0, 'width': 320, 'height': 180},
+        'hls': {
+            'bitrates': [800, 1200, 2400],  # kbps
+            'resolutions': [(640, 360), (854, 480), (1280, 720)],
+        },
+    },
+}
+
+# Celery Media Processing Tasks
+CELERY_MEDIA_TASKS = {
+    'process_image': 'posts.tasks.process_image_file',
+    'process_video': 'posts.tasks.process_video_file',
+    'generate_hls_playlist': 'posts.tasks.generate_hls_playlist',
+}
+
+# Live Streaming Configuration (Mux)
+MUX_TOKEN_ID = os.getenv('MUX_TOKEN_ID')
+MUX_TOKEN_SECRET = os.getenv('MUX_TOKEN_SECRET')
+MUX_WEBHOOK_SECRET = os.getenv('MUX_WEBHOOK_SECRET')
+
+# Validate Mux configuration only if live streaming is enabled
+LIVE_STREAMING_ENABLED = os.getenv('LIVE_STREAMING_ENABLED', 'false').lower() == 'true'
+if LIVE_STREAMING_ENABLED and not DEBUG and not all([MUX_TOKEN_ID, MUX_TOKEN_SECRET]):
+    raise ValueError("Mux credentials (MUX_TOKEN_ID, MUX_TOKEN_SECRET) are required when live streaming is enabled in production")
+
+# Validate S3 configuration in production when S3 is enabled
+if USE_S3:
+    required_s3_vars = [
+        'AWS_ACCESS_KEY_ID',
+        'AWS_SECRET_ACCESS_KEY',
+        'AWS_STORAGE_BUCKET_NAME',
+        'AWS_S3_REGION_NAME'
+    ]
+    missing_vars = [var for var in required_s3_vars if not os.getenv(var)]
+    if missing_vars:
+        # For development, provide dummy values if not set
+        if DEBUG:
+            os.environ.setdefault('AWS_ACCESS_KEY_ID', 'dummy_key')
+            os.environ.setdefault('AWS_SECRET_ACCESS_KEY', 'dummy_secret')
+            os.environ.setdefault('AWS_STORAGE_BUCKET_NAME', 'dummy_bucket')
+            os.environ.setdefault('AWS_S3_REGION_NAME', 'us-east-1')
+            # Reload the variables after setting environ
+            AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+            AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+            AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
+            AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME')
+        else:
+            raise ValueError(f"Missing required S3 environment variables: {', '.join(missing_vars)}")
+
+# Streaming service settings
+STREAMING_SERVICE_CONFIG = {
+    'mux': {
+        'token_id': MUX_TOKEN_ID,
+        'token_secret': MUX_TOKEN_SECRET,
+        'webhook_secret': MUX_WEBHOOK_SECRET,
+        'webhook_url': os.getenv('MUX_WEBHOOK_URL', f'https://yourdomain.com/api/posts/webhooks/mux/'),
+        'rtmp_base_url': 'rtmp://global-live.mux.com:5222/app',
+        'playback_base_url': 'https://stream.mux.com',
+    }
 }

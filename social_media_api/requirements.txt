@@ -3,5 +3,25 @@ djangorestframework==3.15.2
 djangorestframework-simplejwt==5.3.1
 django-filter==24.3
 channels==4.1.0
-djangorestframework-nested==0.0.1
+daphne==4.1.2
+drf-nested-routers==0.94.0
+django-cors-headers==4.4.0
 Pillow==10.4.0
+
+# Celery and Redis for analytics processing
+celery==5.3.4
+redis==5.0.1
+django-redis==5.4.0
+
+# Media processing and CDN
+django-storages==1.14.4
+boto3==1.35.76
+django-imagekit==5.0.0
+moviepy==1.0.3
+opencv-python==4.10.0.84
+
+# Live streaming service
+mux-python==5.1.0
+
+# HTTP requests for API calls
+requests==2.32.3

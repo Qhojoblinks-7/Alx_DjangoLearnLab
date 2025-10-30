@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ post.title }}{% endblock %}
+
+{% block content %}
+<article class="post-detail">
+    <h2>{{ post.title }}</h2>
+    <p class="post-meta">By {{ post.author.username }} on {{ post.published_date|date:"M d, Y" }}</p>
+    {% if post.tags.all %}
+    <div class="post-tags">
+        <strong>Tags:</strong>
+        {% for tag in post.tags.all %}
+        <a href="{% url 'posts_by_tag' tag.name %}" class="tag-link">{{ tag.name }}</a>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <div class="post-content">{{ post.content|linebreaks }}</div>
+    {% if user.is_authenticated and user == post.author %}
+    <div class="post-actions">
+        <a href="{% url 'post_update' post.pk %}">Edit Post</a>
+        <a href="{% url 'post_delete' post.pk %}" onclick="return confirm('Are you sure you want to delete this post?')">Delete Post</a>
+    </div>
+    {% endif %}
+</article>
+
+<!-- Comments Section -->
+<section class="comments-section">
+    <h3>Comments ({{ post.comments.count }})</h3>
+
+    {% if user.is_authenticated %}
+    <!-- Add Comment Form -->
+    <div class="add-comment">
+        <h4>Add a Comment</h4>
+        <form method="post" action="{% url 'add_comment' post.id %}">
+            {% csrf_token %}
+            {{ comment_form.as_p }}
+            <button type="submit">Post Comment</button>
+        </form>
+    </div>
+    {% else %}
+    <p><a href="{% url 'login' %}">Login</a> to add a comment.</p>
+    {% endif %}
+
+    <!-- Display Comments -->
+    <div class="comments-list">
+        {% for comment in post.comments.all %}
+        <div class="comment">
+            <div class="comment-header">
+                <strong>{{ comment.author.username }}</strong>
+                <span class="comment-date">{{ comment.created_at|date:"M d, Y H:i" }}</span>
+                {% if comment.created_at != comment.updated_at %}
+                <span class="comment-updated">(edited)</span>
+                {% endif %}
+            </div>
+            <div class="comment-content">{{ comment.content|linebreaks }}</div>
+            {% if user.is_authenticated and user == comment.author %}
+            <div class="comment-actions">
+                <a href="{% url 'comment_update' comment.pk %}">Edit</a>
+                <a href="{% url 'comment_delete' comment.pk %}" onclick="return confirm('Are you sure you want to delete this comment?')">Delete</a>
+            </div>
+            {% endif %}
+        </div>
+        {% empty %}
+        <p>No comments yet. Be the first to comment!</p>
+        {% endfor %}
+    </div>
+</section>
+
+<p><a href="{% url 'post_list' %}">Back to all posts</a></p>
+{% endblock %}

@@ -2,28 +2,43 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import async_to_sync
+from django.contrib.auth.models import AnonymousUser
 
 class NotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        # Every user joins a unique group named by their user ID
-        self.user = self.scope["user"]
-        if self.user.is_anonymous:
-            await self.close()
-        
-        self.user_group_name = f'user_{self.user.id}_notifications'
+        print("NotificationConsumer connect called")
+        # Get user from scope (authenticated by ASGI middleware)
+        self.user = self.scope.get('user', AnonymousUser())
+        print(f"User from scope: {self.user}, is_anonymous: {self.user.is_anonymous}")
 
-        # Join the unique user group
-        await self.channel_layer.group_add(
-            self.user_group_name,
-            self.channel_name
-        )
-        await self.accept()
+        if self.user.is_anonymous:
+            print("User is anonymous, closing connection")
+            await self.close()
+            return
+
+        self.user_group_name = f'user_{self.user.id}_notifications'
+        print(f"Joining group: {self.user_group_name}")
+
+        try:
+            # Join the unique user group
+            await self.channel_layer.group_add(
+                self.user_group_name,
+                self.channel_name
+            )
+            print("WebSocket connection accepted")
+            await self.accept()
+        except Exception as e:
+            print(f"Error in connect: {e}")
+            await self.close()
 
     async def disconnect(self, close_code):
-        await self.channel_layer.group_discard(
-            self.user_group_name,
-            self.channel_name
-        )
+        print(f"NotificationConsumer disconnect called, close_code: {close_code}")
+        if hasattr(self, 'user_group_name'):
+            await self.channel_layer.group_discard(
+                self.user_group_name,
+                self.channel_name
+            )
+        print("NotificationConsumer disconnected")
 
     # Receive message from room group (i.e., triggered by the signal)
     async def send_notification(self, event):

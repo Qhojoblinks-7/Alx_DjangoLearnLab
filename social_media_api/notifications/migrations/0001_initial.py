@@ -21,11 +21,11 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('verb', models.CharField(max_length=255)),
                 ('object_id', models.PositiveIntegerField()),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('timestamp', models.DateTimeField(auto_now_add=True)),
                 ('is_read', models.BooleanField(default=False)),
                 ('actor', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='actions_made', to=settings.AUTH_USER_MODEL)),
                 ('content_type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='contenttypes.contenttype')),
-                ('reciepient', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='notifications', to=settings.AUTH_USER_MODEL)),
+                ('recipient', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='notifications', to=settings.AUTH_USER_MODEL)),
             ],
             options={
                 'ordering': ['-created_at'],

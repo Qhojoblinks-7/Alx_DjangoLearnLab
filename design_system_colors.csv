@@ -1,0 +1,9 @@
+Section,Name,Description,Hex,Notes
+Background,Secondary Background,"Separators, subtle hover states, tertiary UI elements (e.g., search bar background).",#F7F9F9,"A very slight off-white/light gray to create soft division without losing the ""light"" feel."
+Text & Contrast,Primary Text,"Body text, headings, main labels.",#0F1419,"Near-black for maximum WCAG contrast ratio on white backgrounds."
+Text & Contrast,Secondary Text,"Timestamps, usernames, placeholder text, secondary captions.",#536471,"A medium-dark gray for lower visual priority, improving information hierarchy."
+Action & Accent,Sport Accent (Primary Action),"Send/Post button, active tab indicator, link color.",#1DA1F2,"A vibrant, recognizable cyan/sky blue. High visibility draws user attention to key actions."
+Action & Accent,Accent Hover,"The slightly darker state of the accent color for feedback on button presses.",#1A8CD8,"Ensures user knows their click registered."
+UI Colors,Border / Divider,"Separator lines, modal borders, field outlines.",#EFF3F4,"Very light gray to define boundaries cleanly without being distracting."
+UI Colors,Success/Positive,"Validation success, growth charts.",#00BA7C,"Standard green for positive feedback."
+UI Colors,Error/Destructive,"Delete buttons, validation failures.",#F4212E,"Standard red for warnings/destructive actions."

@@ -1,138 +1,47 @@
-from rest_framework import viewsets, filters, generics
-from rest_framework import permissions
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
-from .models import Post, Comment, Like
-from .serializers import PostSerializer, CommentSerializer
-from rest_framework import views, status
-from rest_framework.response import Response
-from .permissions import IsOwnerOrReadOnly
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.pagination import LimitOffsetPagination
-from django.shortcuts import get_object_or_404
-from notifications.models import Notification
-from notifications.serializers import NotificationSerializer
-from django.contrib.contenttypes.models import ContentType
-from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer
+# Import all views from submodules
+from .views.search import SearchViewSet
+from .views.explore import (
+    TrendsView, LeaguesView, TeamsView, AthletesView,
+    LiveEventsView, TrendingSidebarView, SuggestedUsersView
+)
+from .views.feeds import (
+    HomeFeedViewSet, LeagueFeedView, TeamFeedView, AthleteFeedView,
+    CommunityFeedView, UserPostsFeedView, UserRepliesFeedView, UserLikesFeedView
+)
+from .views.interactions import (
+    PostLikeView, PostRepostView, PostShareView, PostBookmarkView,
+    PostUnlikeView, CommentLikeView, CommentRepliesView
+)
+from .views.posts import (
+    PostViewSet, CommentViewSet, CreatePostView, GetUploadURLView,
+    PostDetailView, PostRepliesView, PostReplyView, PostViewView,
+    PostPinView, PostHighlightView, PostAnalyticsView,
+    PostReplySettingsView, PostEngagementsView, PostEmbedView, DevUploadView
+)
+from .views.live_streaming import LiveStreamViewSet, LiveStreamWatchView
+from .views.webhooks import mux_webhook
+from .views.utils import log_post_action, FeedCursorPagination
 
-class PostViewSet(viewsets.ModelViewSet):
-    queryset = Post.objects.all()
-    serializer_class = PostSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
-    pagination_class = LimitOffsetPagination
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['title', 'content']
-    
-    
-    # Automatically set the author of the post to the current logged-in user
-    def perform_create(self, serializer):
-        serializer.save(author = self.request.user)
-        
-class CommentViewSet(viewsets.ModelViewSet):
-    queryset = Comment.objects.all()
-    serializer_class = CommentSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
-    pagination_class = LimitOffsetPagination
-    
-    # Retrieve comments for a specific post (nested routing logic)
-    def get_queryset(self):
-        post_id = self.kwargs.get('post_pk')
-        if post_id:
-            return Comment.objects.filter(post_id=post_id)
-        return Comment.objects.all()
-    
-    def perform_create(self, serializer):
-        post_id = self.kwargs.get('post_pk')
-        post = Post.objects.get(id=post_id)
-        serializer.save(author=self.request.user, post=post)
-        
-class FeedViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    A simple ViewSet for viewing the feed of posts.
-    """
-    serializer_class = PostSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    pagination_class = LimitOffsetPagination
-    
-    
-    def get_queryset(self):
-        user = self.request.user
-
-        # Get users the current user follows
-        following_users = user.following.all()  # ✅ following.all()
-
-        # Filter posts from followed users, ordered by creation date (most recent first)
-        queryset = Post.objects.filter(author__in=following_users).order_by('-created_at')  # ✅ Post.objects.filter(author__in=following_users).order_by
-        
-        
-        #  Optimization for speed
-        
-        queryset = queryset.select_related('author').prefetch_related('likes', 'comments')
-        
-        return queryset
-    
-class PostLikeView(views.APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def post(self, request, pk):
-        post = generics.get_object_or_404(Post, pk=pk)
-
-        like, created = Like.objects.get_or_create(user=request.user, post=post)
-
-        if not created:
-            # If like already existed, delete it (UNLIKE)
-            like.delete()
-            status_message = "unliked"
-        else:
-            # If like was created, it's a LIKE
-            status_message = "liked"
-
-            # Create notification for the like
-            notification = Notification.objects.create(
-                recipient=post.author,
-                actor=request.user,
-                verb="liked",
-                target=post
-            )
-
-            # Send real-time WebSocket notification
-            channel_layer = get_channel_layer()
-            notification_data = NotificationSerializer(notification).data
-            group_name = f'user_{post.author.id}_notifications'
-
-            async_to_sync(channel_layer.group_send)(
-                group_name,
-                {
-                    'type': 'send_notification',
-                    'data': notification_data,
-                    'event_type': 'new_notification'
-                }
-            )
-
-        # Return the updated count for the PostCard UI
-        return Response({
-            "status": status_message,
-            "likes_count": post.likes.count(),
-            "is_liked": status_message == "liked"
-        }, status=status.HTTP_200_OK)
+# Re-export for backward compatibility
+__all__ = [
+    'SearchViewSet', 'TrendsView', 'LeaguesView', 'TeamsView', 'AthletesView',
+    'HomeFeedViewSet', 'PostViewSet', 'CommentViewSet', 'PostLikeView',
+    'PostRepostView', 'PostShareView', 'PostBookmarkView', 'PostUnlikeView',
+    'CommentLikeView', 'GetUploadURLView', 'LeagueFeedView', 'TeamFeedView',
+    'AthleteFeedView', 'CommunityFeedView', 'PostDetailView', 'CommentRepliesView',
+    'PostRepliesView', 'PostReplyView', 'CreatePostView', 'UserPostsFeedView',
+    'UserRepliesFeedView', 'UserLikesFeedView', 'LiveEventsView', 'TrendingSidebarView',
+    'SuggestedUsersView', 'PostViewView', 'PostPinView', 'PostHighlightView',
+    'PostAnalyticsView', 'PostReplySettingsView', 'PostEngagementsView', 'PostEmbedView',
+    'LiveStreamViewSet', 'LiveStreamWatchView', 'mux_webhook', 'log_post_action', 'FeedCursorPagination',
+    'DevUploadView'
+]
 
 
-class PostUnlikeView(views.APIView):
-    permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request, pk):
-        post = generics.get_object_or_404(Post, pk=pk)
 
-        try:
-            like = Like.objects.get(user=request.user, post=post)
-            like.delete()
-            status_message = "unliked"
-        except Like.DoesNotExist:
-            return Response({"error": "Post not liked yet"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Return the updated count for the PostCard UI
-        return Response({
-            "status": status_message,
-            "likes_count": post.likes.count(),
-            "is_liked": False
-        }, status=status.HTTP_200_OK)
+
+
+
+
