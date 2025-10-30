@@ -14,7 +14,7 @@
 <form method="post">
     {% csrf_token %}
     <div class="form-group">
-        <label for="{{ form.content.id_for_label }}">Comment:</label>
+        <label for="{{ form.content.id_for_label }}">Comments:</label>
         {{ form.content }}
         {% if form.content.errors %}
             <div class="error">{{ form.content.errors }}</div>
