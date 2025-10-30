@@ -7,7 +7,7 @@ from django.urls import reverse_lazy, reverse
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.http import HttpResponseRedirect
 from django.db.models import Q
-from .models import Post, Comment, Tag
+from .models import Post, Comment
 from .forms import CustomUserCreationForm, PostForm, CommentForm
 
 # Authentication views
@@ -108,21 +108,19 @@ class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 
 # Comment views
-@login_required
-def add_comment(request, post_id):
-    post = get_object_or_404(Post, id=post_id)
-    if request.method == 'POST':
-        form = CommentForm(request.POST)
-        if form.is_valid():
-            comment = form.save(commit=False)
-            comment.post = post
-            comment.author = request.user
-            comment.save()
-            messages.success(request, 'Comment added successfully!')
-            return redirect('post_detail', pk=post_id)
-    else:
-        form = CommentForm()
-    return render(request, 'add_comment.html', {'form': form, 'post': post})
+class CommentCreateView(LoginRequiredMixin, CreateView):
+    model = Comment
+    form_class = CommentForm
+    template_name = 'add_comment.html'
+
+    def form_valid(self, form):
+        form.instance.post = get_object_or_404(Post, id=self.kwargs['post_id'])
+        form.instance.author = self.request.user
+        messages.success(self.request, 'Comment added successfully!')
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse('post_detail', kwargs={'pk': self.kwargs['post_id']})
 
 class CommentUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = Comment
@@ -175,11 +173,10 @@ def search_posts(request):
     return render(request, 'search_results.html', context)
 
 def posts_by_tag(request, tag_name):
-    tag = get_object_or_404(Tag, name=tag_name.lower())
-    posts = tag.posts.all().order_by('-published_date')
+    posts = Post.objects.filter(tags__name__in=[tag_name]).order_by('-published_date')
 
     context = {
-        'tag': tag,
+        'tag_name': tag_name,
         'posts': posts
     }
     return render(request, 'posts_by_tag.html', context)

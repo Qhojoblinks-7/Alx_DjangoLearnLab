@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
 
-{% block title %}Posts tagged with "{{ tag.name }}"{% endblock %}
+{% block title %}Posts tagged with "{{ tag_name }}"{% endblock %}
 
 {% block content %}
-<h2>Posts tagged with "<strong>{{ tag.name }}</strong>"</h2>
+<h2>Posts tagged with "<strong>{{ tag_name }}</strong>"</h2>
 
 {% if posts %}
     <p>Found {{ posts|length }} post{{ posts|length|pluralize }} with this tag:</p>
